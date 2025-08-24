@@ -18,6 +18,7 @@ def webhook():
 
 # ---------------- RUN FLASK ----------------
 if __name__ == "__main__":
-    domain = "https://korireeldownloadbot.onrender.com"
+    domain = "https://koriReelDownloader-7.onrender.com"
     start_bot_webhook(domain)
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
