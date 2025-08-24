@@ -18,6 +18,6 @@ def webhook():
 
 # ---------------- RUN FLASK ----------------
 if __name__ == "__main__":
-    domain = "https://<YOUR_DOMAIN>"  # Replace with your deployed URL
+    domain = "https://korireeldownloadbot.onrender.com"
     start_bot_webhook(domain)
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
