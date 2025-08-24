@@ -18,9 +18,10 @@ def webhook():
 
 # ---------------- RUN FLASK ----------------
 if __name__ == "__main__":
-    domain ="https://korireeldownloader-9.onrender.com"
+    domain = "https://korireeldownloader-10.onrender.com"
+    port = int(os.environ.get("PORT", 5000))
     start_bot_webhook(domain)
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 
-
+    # Start Flask app
+    app.run(host="0.0.0.0", port=port)
 
