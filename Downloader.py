@@ -59,7 +59,9 @@ def blocking_download(url, chat_id, index):
             'merge_output_format': 'mp4',
             'outtmpl': filename,
             'ffmpeg_location': 'D:/TgBots/ffmpeg/bin',
-            'socket_timeout': 600,  # prevent timeout for big files
+            'socket_timeout': 1200,  # 20 minutes
+            'retries': 10,           # retry on failure
+            'continuedl': True,      # resume partial downloads
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
