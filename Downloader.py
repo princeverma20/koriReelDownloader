@@ -6,6 +6,7 @@ import asyncio
 import threading
 import time
 import traceback
+from flask import Flask
 
 # ==================== BOT SETUP ====================
 BOT_TOKEN = '7868993075:AAEWXgddqq_huYD_WpDEwjMH-LA4UFSKDyM' 
@@ -15,6 +16,21 @@ loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 threading.Thread(target=loop.run_forever, daemon=True).start()
 
+# ==================== FLASK WEB SERVER SETUP ====================
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return "Universal Downloader Bot is running..."
+
+def run_flask():
+    port = int(os.environ.get('PORT', 5000))  # Port provided by hosting platform
+    app.run(host='0.0.0.0', port=port)
+
+# Start Flask server in a background thread so it doesn’t block your bot
+flask_thread = threading.Thread(target=run_flask)
+flask_thread.daemon = True
+flask_thread.start()
 
 # ==================== HELPERS ====================
 @bot.message_handler(commands=['start'])
@@ -27,17 +43,13 @@ def start(message):
         parse_mode="Markdown"
     )
 
-
 def is_valid_url(url: str) -> bool:
-    """Validate supported video URLs."""
     pattern = re.compile(
         r'https?://(?:www\.)?(?:youtube\.com|youtu\.be|instagram\.com|vimeo\.com|terabox(?:link)?\.com|1024tera\.com)/'
     )
     return re.match(pattern, url) is not None
 
-
 def get_filename_from_url(url: str, index: int) -> str:
-    """Generate a clean local filename based on source."""
     patterns = {
         "instagram": r"instagram\.com/reels?/([^/?#]+)",
         "youtube": r"(?:v=|youtu\.be/)([A-Za-z0-9_-]{6,})",
@@ -49,10 +61,8 @@ def get_filename_from_url(url: str, index: int) -> str:
             return f"{key}_{match.group(1)}.mp4"
     return f"video_{int(time.time())}_{index}.mp4"
 
-
-# ==================== DOWNLOAD CORE 
+# ==================== DOWNLOAD CORE ====================
 def blocking_download(url: str, chat_id: int, index: int):
-    """Download and send video safely with cleanup."""
     filename = get_filename_from_url(url, index)
     temp_name = f"{filename}.part"
 
@@ -60,7 +70,7 @@ def blocking_download(url: str, chat_id: int, index: int):
         'format': 'bestvideo+bestaudio/best',
         'merge_output_format': 'mp4',
         'outtmpl': filename,
-        'ffmpeg_location': 'D:/TgBots/ffmpeg/bin',
+        'ffmpeg_location': 'D:/TgBots/ffmpeg/bin',  # Adjust if necessary
         'socket_timeout': 900, 
         'retries': 10,
         'continuedl': True,
@@ -71,7 +81,8 @@ def blocking_download(url: str, chat_id: int, index: int):
     }
 
     BOT_LIMIT = 50 * 1024 * 1024
-    TG_USER_LIMIT = 2 * 1024 * 1024 * 1024  # 
+    TG_USER_LIMIT = 2 * 1024 * 1024 * 1024
+    
     try:
         bot.send_message(chat_id, f"📡 Fetching info from:\n{url}")
 
@@ -104,21 +115,19 @@ def blocking_download(url: str, chat_id: int, index: int):
                 bot.send_message(chat_id, msg, parse_mode="Markdown", disable_web_page_preview=False)
                 return
 
-            # Download video
             bot.send_message(chat_id, "⬇️ Downloading video... please wait.")
             ydl.download([url])
 
-        # Upload video
         if os.path.exists(filename):
             try:
                 with open(filename, "rb") as f:
-                    bot.send_video(chat_id, f, caption=f"🎬 {title}")
+                    bot.send_video(chat_id, f, caption=f"🎬 {title}", timeout=600)
                 bot.send_message(chat_id, "✅ Upload complete!")
             except Exception as upload_error:
                 bot.send_message(chat_id, f"⚠️ Downloaded but failed to upload: {upload_error}")
             finally:
                 if os.path.exists(filename):
-                    os.remove(filename)  # Cleanup local file
+                    os.remove(filename)
         else:
             bot.send_message(chat_id, "❌ Download failed or file missing.")
 
@@ -126,13 +135,14 @@ def blocking_download(url: str, chat_id: int, index: int):
         bot.send_message(chat_id, f"❌ Error: {str(e)}")
         traceback.print_exc()
     finally:
-        # Always cleanup temp files even on failure
         for f in [filename, temp_name]:
             if os.path.exists(f):
                 try:
                     os.remove(f)
                 except Exception:
                     pass
+
+# ==================== MESSAGE HANDLER ====================
 @bot.message_handler(func=lambda message: True)
 def handle_links(message):
     urls = message.text.split()
@@ -150,7 +160,6 @@ def handle_links(message):
             loop
         )
 
-
-# ==================== RUN BOT ====================
-print("🚀 Bot is running... waiting for links.")
-bot.polling(non_stop=True)
+if __name__ == '__main__':
+    print("🚀 Bot is running... waiting for links.")
+    bot.polling(non_stop=True)
