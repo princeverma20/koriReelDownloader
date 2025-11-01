@@ -6,13 +6,12 @@ import asyncio
 import threading
 import time
 import traceback
-from flask import Flask, request  # ✅ added request import
+from flask import Flask
 
 # ==================== BOT SETUP ====================
 BOT_TOKEN = '7868993075:AAEWXgddqq_huYD_WpDEwjMH-LA4UFSKDyM' 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Create async loop in background thread
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 threading.Thread(target=loop.run_forever, daemon=True).start()
@@ -22,7 +21,16 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return "🚀 Universal Downloader Bot is running on Render!"
+    return "Universal Downloader Bot is running..."
+
+def run_flask():
+    port = int(os.environ.get('PORT', 5000))  # Port provided by hosting platform
+    app.run(host='0.0.0.0', port=port)
+
+# Start Flask server in a background thread so it doesn’t block your bot
+flask_thread = threading.Thread(target=run_flask)
+flask_thread.daemon = True
+flask_thread.start()
 
 # ==================== HELPERS ====================
 @bot.message_handler(commands=['start'])
@@ -62,8 +70,8 @@ def blocking_download(url: str, chat_id: int, index: int):
         'format': 'bestvideo+bestaudio/best',
         'merge_output_format': 'mp4',
         'outtmpl': filename,
-        'ffmpeg_location': '/usr/bin/ffmpeg',  # ✅ path for Render/Linux
-        'socket_timeout': 900,
+        'ffmpeg_location': 'D:/TgBots/ffmpeg/bin',  # Adjust if necessary
+        'socket_timeout': 900, 
         'retries': 10,
         'continuedl': True,
         'noplaylist': True,
@@ -118,7 +126,8 @@ def blocking_download(url: str, chat_id: int, index: int):
             except Exception as upload_error:
                 bot.send_message(chat_id, f"⚠️ Downloaded but failed to upload: {upload_error}")
             finally:
-                os.remove(filename)
+                if os.path.exists(filename):
+                    os.remove(filename)
         else:
             bot.send_message(chat_id, "❌ Download failed or file missing.")
 
@@ -151,17 +160,6 @@ def handle_links(message):
             loop
         )
 
-# ==================== WEBHOOK SETUP ====================
-WEBHOOK_URL = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}/{BOT_TOKEN}"
-
-@app.route(f'/{BOT_TOKEN}', methods=['POST'])
-def webhook():
-    update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
-    bot.process_new_updates([update])
-    return 'OK', 200
-
-if __name__ == "__main__":
-    bot.remove_webhook()
-    bot.set_webhook(url=WEBHOOK_URL)
-    print(f"🚀 Webhook set to {WEBHOOK_URL}")
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+if __name__ == '__main__':
+    print("🚀 Bot is running... waiting for links.")
+    bot.polling(non_stop=True)
